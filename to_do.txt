@@ -1,0 +1,7 @@
+7,Go get breakfast,true
+6,Read at least one book this month,false
+5,Water the plants!,false
+4,Make a vanilla cake,false
+3,Send the documentation for your project,true
+2,Paint eggs for Easter!,false
+1,Buy dog food,true
