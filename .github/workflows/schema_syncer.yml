@@ -44,11 +44,7 @@ jobs:
 
           echo "Checking for schema changes..."
 
-          CHANGED_FILES=$(git diff \
-            --name-only \
-            --diff-filter=AM \
-            "${{ github.event.before }}" \
-            "${{ github.sha }}" \
+          CHANGED_FILES=$(git diff --name-only --diff-filter=AM "${{ github.event.before }}" "${{ github.sha }}")
 
           # Filter by schema extension.
           SCHEMA_FILES=$(echo "$CHANGED_FILES" | grep -E '\.xsd$' || true)
