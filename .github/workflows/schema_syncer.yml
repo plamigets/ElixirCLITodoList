@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   sync-schemas:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     permissions:
       contents: read
@@ -29,7 +29,7 @@ jobs:
       # 1. Checkout Repo A
       # ------------------------------------------------------------
       - name: Checkout Repo A
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 0
 
@@ -86,7 +86,7 @@ jobs:
       # ------------------------------------------------------------
       - name: Checkout Repo B
         if: steps.schemas.outputs.changed == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
         with:
           repository: ${{ env.REPO_B }}
           ref: ${{ env.REPO_B_BRANCH }}
