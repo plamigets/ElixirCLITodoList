@@ -21,7 +21,7 @@ jobs:
       REPO_B: plamigets/ElixirCLITodoList
       REPO_B_BRANCH: main
       #SOURCE_SCHEMA_DIR: schemas <- if the xsd files have one single source
-      TARGET_SCHEMA_DIR: get_xsd_here/
+      TARGET_SCHEMA_DIR: get_xsd_here
 
     steps:
 
