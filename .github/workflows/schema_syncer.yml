@@ -18,7 +18,7 @@ jobs:
       contents: read
 
     env:
-      REPO_B: plamigets/ElixirCLITodoList
+      REPO_B: plamigets/Lab8KR
       REPO_B_BRANCH: main
       #SOURCE_SCHEMA_DIR: schemas <- if the xsd files have one single source
       TARGET_SCHEMA_DIR: get_xsd_here
