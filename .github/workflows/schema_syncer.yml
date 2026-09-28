@@ -20,7 +20,7 @@ jobs:
     env:
       REPO_B: plamigets/ElixirCLITodoList
       REPO_B_BRANCH: main
-      SOURCE_SCHEMA_DIR: schemas
+      #SOURCE_SCHEMA_DIR: schemas <- if the xsd files have one single source
       TARGET_SCHEMA_DIR: get_xsd_here/
 
     steps:
@@ -49,7 +49,6 @@ jobs:
             --diff-filter=AM \
             "${{ github.event.before }}" \
             "${{ github.sha }}" \
-            -- "${SOURCE_SCHEMA_DIR}/")
 
           # Filter by schema extension.
           SCHEMA_FILES=$(echo "$CHANGED_FILES" | grep -E '\.xsd$' || true)
