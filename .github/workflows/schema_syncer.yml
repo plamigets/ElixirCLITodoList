@@ -1,0 +1,172 @@
+name: Sync schemas to Repo B
+
+on:
+  push:
+    branches:
+      - main
+
+# Prevent two schema-sync jobs from modifying Repo B simultaneously.
+concurrency:
+  group: schema-sync
+  cancel-in-progress: false
+
+jobs:
+  sync-schemas:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    env:
+      REPO_B: plamigets/ElixirCLITodoList
+      REPO_B_BRANCH: main
+      SOURCE_SCHEMA_DIR: schemas
+      TARGET_SCHEMA_DIR: get_xsd_here/
+
+    steps:
+
+      # ------------------------------------------------------------
+      # 1. Checkout Repo A
+      # ------------------------------------------------------------
+      - name: Checkout Repo A
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ------------------------------------------------------------
+      # 2. Detect added/modified schema files
+      # ------------------------------------------------------------
+      - name: Detect schema changes
+        id: schemas
+        shell: bash
+        run: |
+          set -e
+
+          echo "Checking for schema changes..."
+
+          CHANGED_FILES=$(git diff \
+            --name-only \
+            --diff-filter=AM \
+            "${{ github.event.before }}" \
+            "${{ github.sha }}" \
+            -- "${SOURCE_SCHEMA_DIR}/")
+
+          # Filter by schema extension.
+          SCHEMA_FILES=$(echo "$CHANGED_FILES" | grep -E '\.xsd$' || true)
+
+          if [ -z "$SCHEMA_FILES" ]; then
+            echo "No new or modified schema files found."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Schema files changed:"
+          echo "$SCHEMA_FILES"
+
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+          # Store the list for later steps.
+          {
+            echo "files<<EOF"
+            echo "$SCHEMA_FILES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      # ------------------------------------------------------------
+      # 3. Stop if nothing relevant changed
+      # ------------------------------------------------------------
+      - name: No schema changes
+        if: steps.schemas.outputs.changed != 'true'
+        run: |
+          echo "Nothing to synchronize."
+          exit 0
+
+      # ------------------------------------------------------------
+      # 4. Checkout Repo B
+      # ------------------------------------------------------------
+      - name: Checkout Repo B
+        if: steps.schemas.outputs.changed == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.REPO_B }}
+          ref: ${{ env.REPO_B_BRANCH }}
+          token: ${{ secrets.REPO_B_TOKEN }}
+          path: ElixirCLITodoList
+          fetch-depth: 0
+
+      # ------------------------------------------------------------
+      # 5. Synchronize schemas
+      # ------------------------------------------------------------
+      - name: Copy schemas to Repo B
+        if: steps.schemas.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -e
+
+          TARGET="ElixirCLITodoList/${TARGET_SCHEMA_DIR}"
+
+          mkdir -p "$TARGET"
+
+          echo "Synchronizing schemas..."
+
+          while IFS= read -r FILE; do
+
+            # Ignore empty lines.
+            [ -z "$FILE" ] && continue
+
+            SOURCE="$FILE"
+            FILE_NAME=$(basename "$FILE")
+            DESTINATION="$TARGET/$FILE_NAME"
+
+            echo "Copying:"
+            echo "  $SOURCE"
+            echo "  -> $DESTINATION"
+
+            cp "$SOURCE" "$DESTINATION"
+
+          done <<< "${{ steps.schemas.outputs.files }}"
+
+      # ------------------------------------------------------------
+      # 6. Show what changed in Repo B
+      # ------------------------------------------------------------
+      - name: Show Repo B changes
+        if: steps.schemas.outputs.changed == 'true'
+        working-directory: ElixirCLITodoList
+        run: |
+          git status
+          git diff -- Test/testFiles/
+
+      # ------------------------------------------------------------
+      # 7. Commit changes
+      # ------------------------------------------------------------
+      - name: Commit changes
+        if: steps.schemas.outputs.changed == 'true'
+        working-directory: ElixirCLITodoList
+        shell: bash
+        run: |
+          set -e
+
+          git config user.name "schema-sync[bot]"
+          git config user.email "schema-sync[bot]@users.noreply.github.com"
+
+          git add "${TARGET_SCHEMA_DIR}"
+
+          # Don't create an empty commit.
+          if git diff --cached --quiet; then
+            echo "No actual changes to commit."
+            exit 0
+          fi
+
+          git commit -m "chore: synchronize schemas from Repo A"
+
+      # ------------------------------------------------------------
+      # 8. Push to Repo B
+      # ------------------------------------------------------------
+      - name: Push changes to Repo B
+        if: steps.schemas.outputs.changed == 'true'
+        working-directory: ElixirCLITodoList
+        shell: bash
+        run: |
+          set -e
+
+          git push origin "$REPO_B_BRANCH"
